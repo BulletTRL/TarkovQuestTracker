@@ -28,6 +28,9 @@ const progressBar = document.getElementById("progress");
 const progressText = document.getElementById("progress-text");
 const toggleCompletedBtn = document.getElementById("toggle-completed");
 const toggleKappaBtn = document.getElementById("toggle-kappa");
+const questContainer = document.getElementById("quest-container");
+const flowContainer = document.getElementById("flow-container");
+const questTreeCanvas = document.getElementById("quest-tree-canvas");
 
 // --- Menu Elements ---
 const menuBtn = document.getElementById("menu-btn");
@@ -58,14 +61,15 @@ if (closeSidebar) {
 }
 
 viewQuests.addEventListener("click", () => {
-  document.getElementById("quest-container").style.display = "block";
-  document.getElementById("flow-container").style.display = "none";
+  questContainer.style.display = "block";
+  flowContainer.style.display = "none";
   sideMenu.classList.remove("show");
 });
 
 viewFlow.addEventListener("click", () => {
-  document.getElementById("quest-container").style.display = "none";
-  document.getElementById("flow-container").style.display = "block";
+  questContainer.style.display = "none";
+  flowContainer.style.display = "block";
+  renderQuestTree();
   sideMenu.classList.remove("show");
 });
 
@@ -98,6 +102,281 @@ toggleKappaBtn.addEventListener("click", () => {
   toggleKappaBtn.textContent = showKappaOnly ? "Show All Tasks" : "Show Only Kappa";
   render();
 });
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function normalizeToArray(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return [value];
+}
+
+function buildQuestGraphData(allQuests) {
+  const questMap = new Map(allQuests.map((quest) => [quest.id, quest]));
+  const nodes = allQuests.map((quest) => ({
+    id: quest.id,
+    name: quest.name,
+    trader: quest.trader || "Unknown",
+    kappa: Boolean(quest.kappa_required),
+  }));
+
+  const edges = [];
+  const dedupe = new Set();
+
+  allQuests.forEach((quest) => {
+    normalizeToArray(quest.requires).forEach((reqId) => {
+      if (!questMap.has(reqId) || reqId === quest.id) return;
+      const key = `${reqId}->${quest.id}`;
+      if (dedupe.has(key)) return;
+      dedupe.add(key);
+      edges.push({ from: reqId, to: quest.id, type: "requires" });
+    });
+
+    normalizeToArray(quest.unlocks).forEach((unlockId) => {
+      if (!questMap.has(unlockId) || unlockId === quest.id) return;
+      const key = `${quest.id}->${unlockId}`;
+      if (dedupe.has(key)) return;
+      dedupe.add(key);
+      edges.push({ from: quest.id, to: unlockId, type: "unlocks" });
+    });
+  });
+
+  return { nodes, edges };
+}
+
+function computeQuestLevels(nodes, edges) {
+  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+  const indegree = new Map(nodes.map((node) => [node.id, 0]));
+  const adjacency = new Map();
+
+  edges.forEach((edge) => {
+    if (!nodeMap.has(edge.from) || !nodeMap.has(edge.to) || edge.from === edge.to) return;
+    indegree.set(edge.to, (indegree.get(edge.to) || 0) + 1);
+    if (!adjacency.has(edge.from)) adjacency.set(edge.from, []);
+    adjacency.get(edge.from).push(edge.to);
+  });
+
+  const queue = [];
+  indegree.forEach((value, id) => {
+    if (value === 0) {
+      queue.push(id);
+    }
+  });
+
+  const level = new Map();
+  queue.forEach((id) => level.set(id, 0));
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    const currentLevel = level.get(current) || 0;
+    (adjacency.get(current) || []).forEach((target) => {
+      const proposed = currentLevel + 1;
+      const existing = level.get(target);
+      if (existing === undefined || proposed > existing) {
+        level.set(target, proposed);
+      }
+
+      const nextDegree = (indegree.get(target) || 0) - 1;
+      indegree.set(target, nextDegree);
+      if (nextDegree <= 0) {
+        queue.push(target);
+      }
+    });
+  }
+
+  nodes.forEach((node) => {
+    if (!level.has(node.id)) {
+      level.set(node.id, 0);
+    }
+  });
+
+  return level;
+}
+
+function renderQuestTree() {
+  if (!questTreeCanvas) return;
+
+  while (questTreeCanvas.firstChild) {
+    questTreeCanvas.removeChild(questTreeCanvas.firstChild);
+  }
+
+  const { nodes, edges } = buildQuestGraphData(quests);
+
+  if (nodes.length === 0) {
+    questTreeCanvas.setAttribute("width", "400");
+    questTreeCanvas.setAttribute("height", "200");
+    questTreeCanvas.style.width = "400px";
+    questTreeCanvas.style.height = "200px";
+    const emptyText = document.createElementNS(SVG_NS, "text");
+    emptyText.setAttribute("x", "20");
+    emptyText.setAttribute("y", "40");
+    emptyText.setAttribute("fill", "#888");
+    emptyText.textContent = "No quests available to visualize.";
+    questTreeCanvas.appendChild(emptyText);
+    return;
+  }
+
+  const levelMap = computeQuestLevels(nodes, edges);
+  const levelGroups = new Map();
+
+  nodes.forEach((node) => {
+    const lvl = levelMap.get(node.id) || 0;
+    if (!levelGroups.has(lvl)) levelGroups.set(lvl, []);
+    levelGroups.get(lvl).push(node);
+  });
+
+  const sortedLevels = Array.from(levelGroups.keys()).sort((a, b) => a - b);
+  levelGroups.forEach((group) => {
+    group.sort((a, b) => {
+      const traderComparison = (a.trader || "").localeCompare(b.trader || "");
+      if (traderComparison !== 0) return traderComparison;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+  });
+
+  const columnCount = Math.max(sortedLevels.length, 1);
+  const maxPerColumn = Math.max(
+    1,
+    ...sortedLevels.map((lvl) => levelGroups.get(lvl).length)
+  );
+
+  const padding = 40;
+  const nodeWidth = 180;
+  const nodeHeight = 70;
+  const horizontalGap = 90;
+  const verticalGap = 60;
+  const columnSpacing = nodeWidth + horizontalGap;
+  const rowSpacing = nodeHeight + verticalGap;
+
+  const totalWidth = padding * 2 + (columnCount - 1) * columnSpacing + nodeWidth;
+  const totalHeight = padding * 2 + (maxPerColumn - 1) * rowSpacing + nodeHeight;
+
+  questTreeCanvas.setAttribute("viewBox", `0 0 ${totalWidth} ${totalHeight}`);
+  questTreeCanvas.setAttribute("width", totalWidth);
+  questTreeCanvas.setAttribute("height", totalHeight);
+  questTreeCanvas.style.width = `${totalWidth}px`;
+  questTreeCanvas.style.height = `${totalHeight}px`;
+
+  const defs = document.createElementNS(SVG_NS, "defs");
+  const marker = document.createElementNS(SVG_NS, "marker");
+  marker.setAttribute("id", "quest-tree-arrow");
+  marker.setAttribute("markerWidth", "10");
+  marker.setAttribute("markerHeight", "10");
+  marker.setAttribute("refX", "9");
+  marker.setAttribute("refY", "3");
+  marker.setAttribute("orient", "auto");
+  marker.setAttribute("markerUnits", "strokeWidth");
+
+  const markerPath = document.createElementNS(SVG_NS, "path");
+  markerPath.setAttribute("d", "M0,0 L0,6 L9,3 z");
+  markerPath.setAttribute("fill", "#3bb273");
+  marker.appendChild(markerPath);
+  defs.appendChild(marker);
+  questTreeCanvas.appendChild(defs);
+
+  const levelColumnIndex = new Map(sortedLevels.map((lvl, idx) => [lvl, idx]));
+  const nodePositions = new Map();
+
+  sortedLevels.forEach((lvl) => {
+    const columnIndex = levelColumnIndex.get(lvl);
+    const nodesInLevel = levelGroups.get(lvl);
+    const startY = padding + ((maxPerColumn - nodesInLevel.length) * rowSpacing) / 2;
+    nodesInLevel.forEach((node, index) => {
+      const x = padding + columnIndex * columnSpacing;
+      const y = startY + index * rowSpacing;
+      nodePositions.set(node.id, { x, y });
+    });
+  });
+
+  const edgeGroup = document.createElementNS(SVG_NS, "g");
+  edgeGroup.setAttribute("class", "tree-links");
+
+  const incomingCounts = new Map(nodes.map((node) => [node.id, 0]));
+  edges.forEach((edge) => {
+    incomingCounts.set(edge.to, (incomingCounts.get(edge.to) || 0) + 1);
+  });
+
+  edges.forEach((edge) => {
+    const fromPos = nodePositions.get(edge.from);
+    const toPos = nodePositions.get(edge.to);
+    if (!fromPos || !toPos) return;
+
+    const startX = fromPos.x + nodeWidth;
+    const startY = fromPos.y + nodeHeight / 2;
+    const endX = toPos.x;
+    const endY = toPos.y + nodeHeight / 2;
+    const direction = endX >= startX ? 1 : -1;
+    const control = Math.max(60, Math.abs(endX - startX) / 2);
+    const c1x = startX + control * direction;
+    const c2x = endX - control * direction;
+
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute(
+      "d",
+      `M ${startX} ${startY} C ${c1x} ${startY}, ${c2x} ${endY}, ${endX} ${endY}`
+    );
+    path.setAttribute("class", `tree-link ${edge.type}`);
+    path.setAttribute("marker-end", "url(#quest-tree-arrow)");
+    edgeGroup.appendChild(path);
+  });
+
+  questTreeCanvas.appendChild(edgeGroup);
+
+  const nodeGroup = document.createElementNS(SVG_NS, "g");
+
+  nodes.forEach((node) => {
+    const position = nodePositions.get(node.id);
+    if (!position) return;
+
+    const isCompleted = progress.completed.includes(node.id);
+    const nodeContainer = document.createElementNS(SVG_NS, "g");
+    nodeContainer.setAttribute("transform", `translate(${position.x}, ${position.y})`);
+    nodeContainer.classList.add("tree-node");
+    nodeContainer.classList.add(isCompleted ? "completed" : "pending");
+    if (node.kappa) nodeContainer.classList.add("kappa");
+
+    const rect = document.createElementNS(SVG_NS, "rect");
+    rect.setAttribute("width", nodeWidth);
+    rect.setAttribute("height", nodeHeight);
+    rect.setAttribute("rx", "12");
+    rect.setAttribute("ry", "12");
+    nodeContainer.appendChild(rect);
+
+    const nameText = document.createElementNS(SVG_NS, "text");
+    nameText.setAttribute("x", nodeWidth / 2);
+    nameText.setAttribute("y", 28);
+    nameText.setAttribute("text-anchor", "middle");
+    nameText.textContent = node.name;
+    nodeContainer.appendChild(nameText);
+
+    const metaParts = [];
+    if (node.trader) metaParts.push(node.trader);
+    const requirementCount = incomingCounts.get(node.id) || 0;
+    if (requirementCount > 0) metaParts.push(`${requirementCount} prereq${requirementCount > 1 ? "s" : ""}`);
+    if (node.kappa) metaParts.push("◆ Kappa");
+
+    if (metaParts.length > 0) {
+      const metaText = document.createElementNS(SVG_NS, "text");
+      metaText.setAttribute("x", nodeWidth / 2);
+      metaText.setAttribute("y", nodeHeight - 16);
+      metaText.setAttribute("text-anchor", "middle");
+      metaText.setAttribute("class", "node-meta");
+      metaText.textContent = metaParts.join(" • ");
+      nodeContainer.appendChild(metaText);
+    }
+
+    const title = document.createElementNS(SVG_NS, "title");
+    const status = isCompleted ? "Completed" : "Incomplete";
+    title.textContent = `${node.name} (${status})`;
+    nodeContainer.appendChild(title);
+
+    nodeGroup.appendChild(nodeContainer);
+  });
+
+  questTreeCanvas.appendChild(nodeGroup);
+}
+
+window.renderQuestTree = renderQuestTree;
 
 function saveProgress() {
   fs.writeFileSync(progressFile, JSON.stringify(progress, null, 2));
@@ -361,6 +640,7 @@ function render() {
   });
 
   updateProgress(filtered);
+  renderQuestTree();
 }
 
 document.addEventListener("click", (e) => {
