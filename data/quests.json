@@ -1,0 +1,110 @@
+[
+  {
+    "id": "bp_depot",
+    "name": "BP Depot",
+    "trader": "Prapor",
+    "map": "Customs",
+    "level_required": 5,
+    "description": "Locate and mark the four fuel tanks on Customs with MS2000 markers, then survive and extract.",
+    "objectives": [
+      "Mark the four fuel tanks with MS2000 markers",
+      "Survive and extract from Customs"
+    ],
+    "rewards": {
+      "exp": 2800,
+      "prapor_rep": 0.03,
+      "roubles": 30000
+    },
+    "requires": ["Delivery From The Past"],
+    "unlocks": ["Bad Rep Evidence"],
+    "kappa_required": true,
+    "wiki_link": "https://escapefromtarkov.fandom.com/wiki/BP_Depot"
+  },
+  {
+    "id": "sanitary_standards_part_1",
+    "name": "Sanitary Standards - Part 1",
+    "trader": "Therapist",
+    "map": "Customs",
+    "level_required": 4,
+    "description": "Find and hand over Gas Analyzers to the Therapist to aid her in testing water contamination.",
+    "objectives": [
+      "Find 3 Gas Analyzers in raid",
+      "Hand over the Gas Analyzers to the Therapist"
+    ],
+    "rewards": {
+      "exp": 3900,
+      "roubles": 15000,
+      "therapist_rep": 0.04
+    },
+    "requires": ["Shortage"],
+    "unlocks": ["Sanitary Standards - Part 2"],
+    "kappa_required": true,
+    "wiki_link": "https://escapefromtarkov.fandom.com/wiki/Sanitary_Standards_-_Part_1"
+  },
+  {
+    "id": "friend_from_the_west_part_2",
+    "name": "Friend From the West - Part 2",
+    "trader": "Skier",
+    "map": "Interchange",
+    "level_required": 9,
+    "description": "Prove your loyalty to Skier by collecting PMC dogtags from USEC operators.",
+    "objectives": [
+      "Collect 6 USEC PMC dogtags",
+      "Hand over the dogtags to Skier"
+    ],
+    "rewards": {
+      "exp": 6100,
+      "roubles": 45000,
+      "skier_rep": 0.05
+    },
+    "requires": ["Friend From the West - Part 1"],
+    "unlocks": ["Fishing Gear", "Lend-Lease - Part 1", "Long Road", "Setup"],
+    "kappa_required": true,
+    "wiki_link": "https://escapefromtarkov.fandom.com/wiki/Friend_From_the_West_-_Part_2"
+  },
+  {
+    "id": "golden_swag",
+    "name": "Golden Swag",
+    "trader": "Skier",
+    "map": "Customs",
+    "level_required": 5,
+    "description": "Retrieve the Golden Zibbo lighter from the dorms on Customs and stash it in the designated location.",
+    "objectives": [
+      "Find the Golden Zibbo lighter in the dorm room 303 on Customs",
+      "Stash the lighter in the designated location",
+      "Survive and extract from Customs"
+    ],
+    "rewards": {
+      "exp": 3200,
+      "roubles": 20000,
+      "skier_rep": 0.03
+    },
+    "requires": ["What's on the Flash Drive?"],
+    "unlocks": ["Chemical - Part 1"],
+    "kappa_required": true,
+    "wiki_link": "https://escapefromtarkov.fandom.com/wiki/Golden_Swag"
+  },
+  {
+    "id": "the_collector",
+    "name": "The Collector",
+    "trader": "Fence",
+    "map": "All Maps",
+    "level_required": 55,
+    "description": "Obtain and hand over all unique streamer items to Fence in exchange for the Kappa Secure Container.",
+    "objectives": [
+      "Collect all unique streamer items",
+      "Hand over all streamer items to Fence"
+    ],
+    "rewards": {
+      "items": [
+        "Secure container Kappa",
+        "Armband (DEADSKUL)"
+      ],
+      "achievement": "The Kappa Path"
+    },
+    "requires": ["All Kappa Tasks"],
+    "unlocks": [],
+    "kappa_required": true,
+    "wiki_link": "https://escapefromtarkov.fandom.com/wiki/Collector"
+  }
+]

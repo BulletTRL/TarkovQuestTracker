@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tarkov Quest Tracker</title>
+  <style>
+    body {
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      background: #222;
+      padding: 12px;
+      margin: 0;
+      text-align: center;
+      letter-spacing: 0.5px;
+      position: relative;
+    }
+
+    /* Menu Button */
+    #menu-btn {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #eee;
+      font-size: 1.4rem;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    #menu-btn:hover { color: #3bb273; }
+
+    /* Slide Menu */
+    #side-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 165px;
+      height: 100%;
+      background: #111;
+      border-right: 1px solid #222;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.4);
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 18px 14px 10px 14px; /* Bottom margin added */
+      box-sizing: border-box;
+    }
+    #side-menu.show { transform: translateX(0); }
+
+    #side-menu h3 {
+      color: #bbb;
+      margin: 0 0 10px;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      border-bottom: 1px solid #222;
+      padding-bottom: 4px;
+    }
+
+    .menu-item {
+      display: block;
+      width: 100%;
+      margin: 5px 0;
+      padding: 6px 8px;
+      background: none;
+      border: 1px solid #222;
+      border-radius: 5px;
+      color: #ccc;
+      text-align: left;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+    .menu-item:hover {
+      border-color: #3bb273;
+      color: #fff;
+      background: rgba(59,178,115,0.1);
+    }
+
+    /* Close arrow */
+    #close-sidebar {
+      position: absolute;
+      top: 50%;
+      right: -10px;
+      transform: translateY(-50%);
+      background: #111;
+      border: 1px solid #222;
+      border-left: none;
+      border-radius: 0 6px 6px 0;
+      color: #999;
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 3px 5px;
+      transition: 0.2s;
+    }
+    #close-sidebar:hover {
+      color: #3bb273;
+      background: #181818;
+    }
+
+    /* Progress + Quests */
+    #progress-container { margin: 15px; }
+
+    #progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      gap: 8px;
+    }
+
+    #button-group { display: flex; gap: 8px; }
+
+    #progress-text { margin: 0; font-size: 0.95rem; }
+
+    .small-btn {
+      background: #2a2a2a;
+      color: #ccc;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .small-btn:hover {
+      background: #3bb273;
+      color: #111;
+    }
+
+    .bar {
+      height: 24px;
+      background: #333;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .fill {
+      height: 100%;
+      background: #3bb273;
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    #quest-list { margin: 10px; }
+
+    h2 {
+      color: #e0e0e0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin: 16px 6px 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #2a2a2a;
+      letter-spacing: 0.5px;
+    }
+
+    .quest {
+      background: #1a1a1a;
+      margin: 6px;
+      padding: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.2s;
+      color: #eee;
+      border: 1px solid #222;
+    }
+    .quest:hover { background: #222; }
+
+    .quest-details.hidden { display: none; }
+    .quest-details { animation: expand 0.2s ease-out; }
+
+    @keyframes expand {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <h1>
+    <button id="menu-btn">☰</button>
+    Bullet's Quest Tracker
+  </h1>
+
+  <!-- Slide Menu -->
+  <div id="side-menu">
+    <div>
+      <h3>Views</h3>
+      <button class="menu-item" id="view-quests">Quest Tracker</button>
+      <button class="menu-item" id="view-flow">Quest Tree</button>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <h3>Resources</h3>
+      <button class="menu-item" id="open-wiki">Tarkov Wiki</button>
+      <button class="menu-item" id="open-youtube">YouTube</button>
+      <button class="menu-item" id="open-twitch">Twitch</button>
+    </div>
+
+    <button id="close-sidebar">&lt;</button>
+  </div>
+
+  <!-- Main Quest Tracker -->
+  <div id="quest-container">
+    <div id="progress-container">
+      <div id="progress-header">
+        <p id="progress-text">0 / 0 completed</p>
+        <div id="button-group">
+          <button id="toggle-kappa" class="small-btn">Show Only Kappa</button>
+          <button id="toggle-completed" class="small-btn">Show Completed</button>
+        </div>
+      </div>
+      <div class="bar">
+        <div class="fill" id="progress"></div>
+      </div>
+    </div>
+
+    <div id="quest-list"></div>
+  </div>
+
+  <!-- Flow View Placeholder -->
+  <div id="flow-container" style="display:none; padding:20px;">
+    <h2>Quest Tree UI</h2>
+    <p style="color:#888;">Coming soon: Automatic quest dependency visualization.</p>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

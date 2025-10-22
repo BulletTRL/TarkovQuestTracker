@@ -1,0 +1,16 @@
+{
+  "name": "tarkov-kappa-tracker",
+  "version": "1.0.0",
+  "description": "Offline quest tracker for Kappa container progression. By BulletTRL",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^32.3.3"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
